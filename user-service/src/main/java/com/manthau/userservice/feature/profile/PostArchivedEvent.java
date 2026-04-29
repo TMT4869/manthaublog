@@ -1,4 +1,4 @@
-package com.manthau.userservice.shared.event;
+package com.manthau.userservice.feature.profile;
 
 import lombok.*;
 import java.time.LocalDateTime;
