@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -54,12 +53,12 @@ public class FollowService {
         userProfileRepository.incrementFollowersCount(target.getId());
         userProfileRepository.incrementFollowingCount(followerId);
 
-        // Invalidate cache
-        cacheService.evictFollowCount(followerId);
-        cacheService.evictFollowCount(target.getId());
-
         // Lấy follower info để publish event
         UserProfile follower = userService.findByIdOrThrow(followerId);
+
+        // Invalidate cache
+        cacheService.evictProfile(follower.getUsername());
+        cacheService.evictProfile(target.getUsername());
 
         // Publish event → Notification Service sẽ consume
         UserFollowedEvent event = UserFollowedEvent.builder()
@@ -71,12 +70,13 @@ public class FollowService {
                 .build();
 
         rabbitTemplate.convertAndSend(exchange, "user.followed", event);
-        log.info("User {} followed {}", follower.getUsername(), targetUsername);
+        log.info("User {} followed {}", follower.getUsername(), target.getUsername());
     }
 
     @Transactional
     public void unfollow(UUID followerId, String targetUsername) {
         UserProfile target = userService.findByUsernameOrThrow(targetUsername);
+        UserProfile follower = userService.findByIdOrThrow(followerId);
 
         if (!followRepository.existsByIdFollowerIdAndIdFollowingId(followerId, target.getId())) {
             return; // Idempotent — không throw nếu chưa follow
@@ -86,10 +86,10 @@ public class FollowService {
         userProfileRepository.decrementFollowersCount(target.getId());
         userProfileRepository.decrementFollowingCount(followerId);
 
-        cacheService.evictFollowCount(followerId);
-        cacheService.evictFollowCount(target.getId());
+        cacheService.evictProfile(follower.getUsername());
+        cacheService.evictProfile(target.getUsername());
 
-        log.info("User {} unfollowed {}", followerId, targetUsername);
+        log.info("User {} unfollowed {}", follower.getUsername(), target.getUsername());
     }
 
     public boolean isFollowing(UUID followerId, UUID targetId) {

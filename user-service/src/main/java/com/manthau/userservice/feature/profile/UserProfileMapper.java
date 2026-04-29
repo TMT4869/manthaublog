@@ -29,6 +29,7 @@ public class UserProfileMapper {
     public void updateEntity(UserProfile entity, UpdateProfileRequest request) {
         if (request.getDisplayName() != null) entity.setDisplayName(request.getDisplayName());
         if (request.getBio() != null) entity.setBio(request.getBio());
+        if (request.getAvatarUrl() != null) entity.setAvatarUrl(request.getAvatarUrl());
         if (request.getWebsite() != null) entity.setWebsite(request.getWebsite());
         if (request.getLocation() != null) entity.setLocation(request.getLocation());
     }

@@ -13,6 +13,10 @@ public class UpdateProfileRequest {
     @Size(max = 500, message = "Bio must not exceed 500 characters")
     private String bio;
 
+    @URL(message = "Avatar URL must be a valid URL")
+    @Size(max = 500)
+    private String avatarUrl;
+
     @URL(message = "Website must be a valid URL")
     @Size(max = 255)
     private String website;

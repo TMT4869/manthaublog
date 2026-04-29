@@ -35,4 +35,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     @Modifying
     @Query("UPDATE UserProfile u SET u.postsCount = u.postsCount + 1 WHERE u.id = :userId")
     void incrementPostsCount(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query("UPDATE UserProfile u SET u.postsCount = u.postsCount - 1 WHERE u.id = :userId AND u.postsCount > 0")
+    void decrementPostsCount(@Param("userId") UUID userId);
 }

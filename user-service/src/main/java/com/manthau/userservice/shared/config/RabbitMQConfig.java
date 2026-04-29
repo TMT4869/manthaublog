@@ -15,44 +15,60 @@ public class RabbitMQConfig {
     public static final String USER_EXCHANGE = "user.exchange";
     public static final String USER_REGISTERED_QUEUE = "user.registered.queue";
     public static final String USER_FOLLOWED_QUEUE = "user.followed.queue";
+    public static final String POST_APPROVED_QUEUE = "user.post.approved.queue";
+    public static final String POST_ARCHIVED_QUEUE = "user.post.archived.queue";
+    public static final String KEY = "x-dead-letter-exchange";
+    public static final String DLX = "dlx.exchange";
 
     @Bean
-    public TopicExchange userExchange() {
+    TopicExchange userExchange() {
         return new TopicExchange(USER_EXCHANGE);
     }
 
     @Bean
-    public Queue userRegisteredQueue() {
+    Queue userRegisteredQueue() {
         return QueueBuilder.durable(USER_REGISTERED_QUEUE)
-                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument(KEY, DLX)
                 .build();
     }
 
     @Bean
-    public Queue userFollowedQueue() {
+    Queue userFollowedQueue() {
         return QueueBuilder.durable(USER_FOLLOWED_QUEUE)
-                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument(KEY, DLX)
                 .build();
     }
 
     @Bean
-    public Binding userRegisteredBinding(Queue userRegisteredQueue, TopicExchange userExchange) {
+    Binding userRegisteredBinding(Queue userRegisteredQueue, TopicExchange userExchange) {
         return BindingBuilder.bind(userRegisteredQueue).to(userExchange).with("user.registered");
     }
 
     @Bean
-    public Binding userFollowedBinding(Queue userFollowedQueue, TopicExchange userExchange) {
+    Binding userFollowedBinding(Queue userFollowedQueue, TopicExchange userExchange) {
         return BindingBuilder.bind(userFollowedQueue).to(userExchange).with("user.followed");
     }
 
     @Bean
-    public MessageConverter messageConverter() {
+    Queue postApprovedQueue() {
+        return QueueBuilder.durable(POST_APPROVED_QUEUE)
+                .withArgument(KEY, DLX)
+                .build();
+    }
+
+    @Bean
+    Binding postApprovedBinding(TopicExchange postExchange) {
+        return BindingBuilder.bind(postApprovedQueue()).to(postExchange).with("post.approved");
+    }
+
+    @Bean
+    MessageConverter messageConverter() {
         JsonMapper jsonMapper = JsonMapper.builder().build();
         return new JacksonJsonMessageConverter(jsonMapper);
     }
 
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+    RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
                                          MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(messageConverter);
