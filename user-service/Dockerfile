@@ -1,15 +1,16 @@
 # syntax=docker/dockerfile:1.7
 
-FROM maven:3.9.11-eclipse-temurin-25 AS builder
+FROM eclipse-temurin:25-jdk AS builder
 WORKDIR /app
 
-COPY pom.xml ./
-RUN mvn -B -DskipTests dependency:go-offline
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw -B -DskipTests dependency:go-offline
 
 COPY src ./src
-RUN mvn -B -DskipTests clean package
+RUN ./mvnw -B -DskipTests clean package
 
-FROM eclipse-temurin:25-jdk
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 COPY --from=builder /app/target/*.jar /app/app.jar

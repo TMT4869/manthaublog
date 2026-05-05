@@ -4,6 +4,3 @@ build
 .idea
 *.iml
 *.log
-
-# Maven local metadata in project (if any)
-.mvn
