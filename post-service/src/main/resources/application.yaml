@@ -1,3 +1,52 @@
+server:
+  port: ${SERVER_PORT:8083}
+
 spring:
   application:
     name: post-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/post_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        "[format_sql]": true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+    virtual-host: /
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:your-256-bit-secret-key-here-change-in-production}
+    expiration-ms: 86400000
+
+  cache:
+    post-ttl-minutes: 10
+    trending-ttl-minutes: 5
+    feed-ttl-minutes: 2
+    tags-popular-ttl-minutes: 30
+    view-dedup-ttl-minutes: 30
+    idempotency-ttl-hours: 24
+
+logging:
+  level:
+    "[com.manthau.postservice]": DEBUG
+    "[org.springframework.amqp]": WARN
