@@ -7,3 +7,9 @@
 
 ### IntelliJ IDEA ###
 .idea
+
+### Claude Code ###
+.claude/
+
+### Codex ###
+.codex/
