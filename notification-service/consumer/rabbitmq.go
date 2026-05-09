@@ -20,7 +20,7 @@ const (
 	batchSize      = 500
 	workerPool     = 8
 	maxRetries     = 3
-	queueEmailSend = queueEmailSend
+	queueEmailSend = "email.send"
 )
 
 type Consumer struct {
