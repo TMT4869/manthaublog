@@ -34,19 +34,34 @@ func main() {
 	if err != nil {
 		logger.Fatal("RabbitMQ connect failed", zap.Error(err))
 	}
-	defer conn.Close()
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			logger.Error("RabbitMQ close failed", zap.Error(err))
+		}
+	}(conn)
 
 	pubCh, err := conn.Channel()
 	if err != nil {
 		logger.Fatal("RabbitMQ publisher channel failed", zap.Error(err))
 	}
-	defer pubCh.Close()
+	defer func(pubCh *amqp.Channel) {
+		err := pubCh.Close()
+		if err != nil {
+			logger.Error("RabbitMQ publisher channel close failed", zap.Error(err))
+		}
+	}(pubCh)
 
 	consCh, err := conn.Channel()
 	if err != nil {
 		logger.Fatal("RabbitMQ consumer channel failed", zap.Error(err))
 	}
-	defer consCh.Close()
+	defer func(consCh *amqp.Channel) {
+		err := consCh.Close()
+		if err != nil {
+			logger.Error("RabbitMQ consumer channel close failed", zap.Error(err))
+		}
+	}(consCh)
 
 	proc := processor.New(store)
 	pub := publisher.New(pubCh)
