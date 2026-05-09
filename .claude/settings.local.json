@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"GlobalExceptionHandler\\\\|ControllerAdvice\")",
+      "Bash(Get-ChildItem -Path \"f:\\\\MyProjects\\\\Blog\\\\manthaublog\\\\notification-service\\\\\" -Force)",
+      "Bash(Get-ChildItem -Path \"f:\\\\MyProjects\\\\Blog\\\\manthaublog\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(go -C f:/MyProjects/Blog/manthaublog/analytics-service mod tidy)",
+      "PowerShell(go -C f:\\\\MyProjects\\\\Blog\\\\manthaublog\\\\analytics-service mod tidy 2>&1)",
+      "PowerShell(where.exe go 2>&1; [System.IO.Directory]::Exists\\(\"C:\\\\Go\"\\))",
+      "Bash(Get-ChildItem -Path \"f:\\\\MyProjects\\\\Blog\\\\manthaublog\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Select-Object -ExpandProperty Name)"
+    ]
+  }
+}

@@ -3,8 +3,8 @@ services:
     image: postgres:16
     environment:
       POSTGRES_DB: devblog
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -32,8 +32,8 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: secret
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
       - "5672:5672"
       - "15672:15672"  # Management UI: http://localhost:15672
@@ -72,8 +72,27 @@ services:
       retries: 10
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"  # Web UI: http://localhost:9001
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   api-gateway:
     build: ./api-gateway
+    env_file: ./api-gateway/.env
     ports:
       - "8080:8080"
     depends_on:
@@ -97,16 +116,9 @@ services:
 
   auth-service:
     build: ./auth-service
+    env_file: ./auth-service/.env
     ports:
       - "8081:8081"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/auth_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,37 +130,19 @@ services:
 
   user-service:
     build: ./user-service
+    env_file: ./user-service/.env
     ports:
       - "8082:8082"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/user_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
 
   post-service:
     build: ./post-service
+    env_file: ./post-service/.env
     ports:
       - "8083:8083"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/post_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -160,17 +154,13 @@ services:
 
   comment-service:
     build: ./comment-service
+    env_file: ./comment-service/.env
     ports:
       - "8084:8084"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/comment_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -178,15 +168,13 @@ services:
 
   search-service:
     build: ./search-service
+    env_file: ./search-service/.env
     ports:
       - "8085:8085"
-    environment:
-      ELASTICSEARCH_HOST: elasticsearch
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       elasticsearch:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -194,15 +182,9 @@ services:
 
   notification-service:
     build: ./notification-service
+    env_file: ./notification-service/.env
     ports:
       - "8086:8086"
-    environment:
-      DATABASE_URL: mongodb://mongo:27017
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: secret
-      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
       mongo:
         condition: service_healthy
@@ -214,16 +196,9 @@ services:
 
   analytics-service:
     build: ./analytics-service
+    env_file: ./analytics-service/.env
     ports:
       - "8087:8087"
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/analytics_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -233,37 +208,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"  # Web UI: http://localhost:9001
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
   media-service:
     build: ./media-service
+    env_file: ./media-service/.env
     ports:
       - "8088:8088"
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: secret
-      MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: media
-      MINIO_USE_SSL: "false"
     depends_on:
       rabbitmq:
         condition: service_healthy

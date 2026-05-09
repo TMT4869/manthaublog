@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 type Config struct {
 	Port        string
@@ -15,6 +19,7 @@ type Config struct {
 }
 
 func Load() *Config {
+	_ = godotenv.Load()
 	return &Config{
 		Port:        getEnv("SERVER_PORT", "8088"),
 		StoragePath: getEnv("STORAGE_PATH", "/app/storage"),

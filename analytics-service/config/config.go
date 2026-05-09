@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 type Config struct {
 	Port          string
@@ -11,6 +15,7 @@ type Config struct {
 }
 
 func Load() *Config {
+	_ = godotenv.Load()
 	return &Config{
 		Port:          getEnv("SERVER_PORT", "8087"),
 		DatabaseURL:   getEnv("DATABASE_URL", "postgres://postgres:secret@postgres:5432/analytics_db"),
