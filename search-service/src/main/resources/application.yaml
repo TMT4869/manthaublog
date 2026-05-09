@@ -1,3 +1,35 @@
+server:
+  port: ${SERVER_PORT:8085}
+
 spring:
   application:
     name: search-service
+
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+    virtual-host: /
+
+app:
+  post-service:
+    url: ${POST_SERVICE_URL:http://localhost:8083}
+
+  cache:
+    suggestions-ttl-hours: 1
+
+logging:
+  level:
+    "[com.manthau.searchservice]": DEBUG
+    "[org.springframework.amqp]": WARN
+    "[co.elastic.clients]": WARN
