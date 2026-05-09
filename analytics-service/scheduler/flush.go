@@ -59,7 +59,7 @@ func (s *Scheduler) flush() {
 	s.logger.Info("flush completed", zap.Int("posts", len(postIDs)), zap.Int("details", len(details)))
 }
 
-func (s *Scheduler) parseViewData(data map[string]int) ([]db.StatRow, map[string]struct{}) {
+func (s *Scheduler) parseViewData(data map[string]int64) ([]db.StatRow, map[string]struct{}) {
 	var rows []db.StatRow
 	postIDs := make(map[string]struct{})
 	for key, count := range data {
