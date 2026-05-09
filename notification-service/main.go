@@ -11,9 +11,10 @@ import (
 	"notification-service/publisher"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.uber.org/zap"
 )
 
@@ -28,13 +29,18 @@ func main() {
 
 	cfg := config.Load()
 
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	mongoClient, err := mongo.Connect(options.Client().ApplyURI(cfg.DatabaseURL))
 	if err != nil {
-		logger.Fatal("postgres connect failed", zap.Error(err))
+		logger.Fatal("mongodb connect failed", zap.Error(err))
 	}
-	defer pool.Close()
+	defer func() {
+		if err := mongoClient.Disconnect(context.Background()); err != nil {
+			logger.Error("mongodb disconnect failed", zap.Error(err))
+		}
+	}()
 
-	store := db.New(pool)
+	col := mongoClient.Database("notification_db").Collection("notifications")
+	store := db.New(col)
 	if err := store.Migrate(context.Background()); err != nil {
 		logger.Fatal("migrate failed", zap.Error(err))
 	}

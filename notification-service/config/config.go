@@ -18,7 +18,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:           getEnv("SERVER_PORT", "8086"),
-		DatabaseURL:    getEnv("DATABASE_URL", "postgres://postgres:secret@postgres:5432/notification_db"),
+		DatabaseURL:    getEnv("DATABASE_URL", "mongodb://mongo:27017"),
 		RedisAddr:      getEnv("REDIS_HOST", "redis") + ":" + getEnv("REDIS_PORT", "6379"),
 		RedisPassword:  getEnv("REDIS_PASSWORD", ""),
 		RabbitMQURL:    buildRabbitMQURL(),

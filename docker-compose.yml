@@ -44,6 +44,19 @@ services:
       retries: 10
     restart: unless-stopped
 
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   elasticsearch:
     image: elasticsearch:8.11.0
     environment:
@@ -184,15 +197,14 @@ services:
     ports:
       - "8086:8086"
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/notification_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: secret
+      DATABASE_URL: mongodb://mongo:27017
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: secret
+      RABBITMQ_USERNAME: admin
+      RABBITMQ_PASSWORD: secret
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -261,4 +273,5 @@ services:
 
 volumes:
   pgdata:
+  mongodata:
   minio_data:

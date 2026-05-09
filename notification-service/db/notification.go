@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Notification struct {
@@ -34,95 +35,127 @@ type Storer interface {
 }
 
 type Store struct {
-	pool *pgxpool.Pool
+	col *mongo.Collection
 }
 
-func New(pool *pgxpool.Pool) *Store {
-	return &Store{pool: pool}
+func New(col *mongo.Collection) *Store {
+	return &Store{col: col}
 }
 
 func (s *Store) Migrate(ctx context.Context) error {
-	_, err := s.pool.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS notifications (
-			id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			user_id    UUID NOT NULL,
-			type       VARCHAR(50) NOT NULL,
-			title      VARCHAR(255) NOT NULL,
-			body       TEXT,
-			link       VARCHAR(500),
-			is_read    BOOLEAN NOT NULL DEFAULT false,
-			created_at TIMESTAMP NOT NULL DEFAULT now()
-		);
-		CREATE INDEX IF NOT EXISTS idx_notifications_user_unread
-			ON notifications (user_id, is_read, created_at DESC);
-	`)
+	_, err := s.col.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "user_id", Value: 1},
+			{Key: "is_read", Value: 1},
+			{Key: "created_at", Value: -1},
+		},
+	})
 	return err
 }
 
-// Save inserts one notification and returns it with the DB-generated ID.
-func (s *Store) Save(ctx context.Context, n Notification) (Notification, error) {
-	err := s.pool.QueryRow(ctx,
-		`INSERT INTO notifications (user_id, type, title, body, link)
-		 VALUES ($1, $2, $3, $4, $5)
-		 RETURNING id, created_at`,
-		n.UserID, n.Type, n.Title, n.Body, n.Link,
-	).Scan(&n.ID, &n.CreatedAt)
-	return n, err
+type notifDoc struct {
+	ID        bson.ObjectID `bson:"_id,omitempty"`
+	UserID    string        `bson:"user_id"`
+	Type      string        `bson:"type"`
+	Title     string        `bson:"title"`
+	Body      string        `bson:"body"`
+	Link      string        `bson:"link"`
+	IsRead    bool          `bson:"is_read"`
+	CreatedAt time.Time     `bson:"created_at"`
 }
 
-// BatchInsert inserts many notifications in a single round-trip (no IDs returned).
+func (d notifDoc) toNotification() Notification {
+	return Notification{
+		ID:        d.ID.Hex(),
+		UserID:    d.UserID,
+		Type:      d.Type,
+		Title:     d.Title,
+		Body:      d.Body,
+		Link:      d.Link,
+		IsRead:    d.IsRead,
+		CreatedAt: d.CreatedAt,
+	}
+}
+
+func (s *Store) Save(ctx context.Context, n Notification) (Notification, error) {
+	doc := notifDoc{
+		UserID:    n.UserID,
+		Type:      n.Type,
+		Title:     n.Title,
+		Body:      n.Body,
+		Link:      n.Link,
+		IsRead:    false,
+		CreatedAt: time.Now().UTC(),
+	}
+	res, err := s.col.InsertOne(ctx, doc)
+	if err != nil {
+		return n, err
+	}
+	n.ID = res.InsertedID.(bson.ObjectID).Hex()
+	n.CreatedAt = doc.CreatedAt
+	return n, nil
+}
+
 func (s *Store) BatchInsert(ctx context.Context, notifications []Notification) error {
 	if len(notifications) == 0 {
 		return nil
 	}
-	batch := &pgx.Batch{}
-	for _, n := range notifications {
-		batch.Queue(
-			`INSERT INTO notifications (user_id, type, title, body, link) VALUES ($1, $2, $3, $4, $5)`,
-			n.UserID, n.Type, n.Title, n.Body, n.Link,
-		)
+	now := time.Now().UTC()
+	docs := make([]any, len(notifications))
+	for i, n := range notifications {
+		docs[i] = notifDoc{
+			UserID:    n.UserID,
+			Type:      n.Type,
+			Title:     n.Title,
+			Body:      n.Body,
+			Link:      n.Link,
+			IsRead:    false,
+			CreatedAt: now,
+		}
 	}
-	return s.pool.SendBatch(ctx, batch).Close()
+	_, err := s.col.InsertMany(ctx, docs)
+	return err
 }
 
 func (s *Store) List(ctx context.Context, userID string, limit, offset int) ([]Notification, error) {
-	rows, err := s.pool.Query(ctx,
-		`SELECT id, user_id, type, title,
-		        COALESCE(body, ''), COALESCE(link, ''), is_read, created_at
-		 FROM notifications
-		 WHERE user_id = $1
-		 ORDER BY created_at DESC
-		 LIMIT $2 OFFSET $3`,
-		userID, limit, offset,
-	)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: -1}}).
+		SetLimit(int64(limit)).
+		SetSkip(int64(offset))
+
+	cur, err := s.col.Find(ctx, bson.M{"user_id": userID}, opts)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer cur.Close(ctx)
 
 	var result []Notification
-	for rows.Next() {
-		var n Notification
-		if err := rows.Scan(&n.ID, &n.UserID, &n.Type, &n.Title, &n.Body, &n.Link, &n.IsRead, &n.CreatedAt); err != nil {
+	for cur.Next(ctx) {
+		var doc notifDoc
+		if err := cur.Decode(&doc); err != nil {
 			return nil, err
 		}
-		result = append(result, n)
+		result = append(result, doc.toNotification())
 	}
-	return result, rows.Err()
+	return result, cur.Err()
 }
 
 func (s *Store) MarkRead(ctx context.Context, id, userID string) error {
-	_, err := s.pool.Exec(ctx,
-		`UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2`,
-		id, userID,
+	oid, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	_, err = s.col.UpdateOne(ctx,
+		bson.M{"_id": oid, "user_id": userID},
+		bson.M{"$set": bson.M{"is_read": true}},
 	)
 	return err
 }
 
 func (s *Store) MarkAllRead(ctx context.Context, userID string) error {
-	_, err := s.pool.Exec(ctx,
-		`UPDATE notifications SET is_read = true WHERE user_id = $1`,
-		userID,
+	_, err := s.col.UpdateMany(ctx,
+		bson.M{"user_id": userID},
+		bson.M{"$set": bson.M{"is_read": true}},
 	)
 	return err
 }
