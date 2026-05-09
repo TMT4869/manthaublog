@@ -19,7 +19,12 @@ import (
 
 func main() {
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer func(logger *zap.Logger) {
+		err := logger.Sync()
+		if err != nil {
+			logger.Error("logger sync failed", zap.Error(err))
+		}
+	}(logger)
 
 	cfg := config.Load()
 
@@ -41,15 +46,25 @@ func main() {
 
 	conn, err := amqp.Dial(cfg.RabbitMQURL)
 	if err != nil {
-		logger.Fatal("rabbitmq connect failed", zap.Error(err))
+		logger.Fatal("RabbitMQ connect failed", zap.Error(err))
 	}
-	defer conn.Close()
+	defer func(conn *amqp.Connection) {
+		err := conn.Close()
+		if err != nil {
+			logger.Error("RabbitMQ close failed", zap.Error(err))
+		}
+	}(conn)
 
 	ch, err := conn.Channel()
 	if err != nil {
-		logger.Fatal("rabbitmq channel failed", zap.Error(err))
+		logger.Fatal("RabbitMQ channel failed", zap.Error(err))
 	}
-	defer ch.Close()
+	defer func(ch *amqp.Channel) {
+		err := ch.Close()
+		if err != nil {
+			logger.Error("RabbitMQ channel close failed", zap.Error(err))
+		}
+	}(ch)
 
 	pub := publisher.New(rdb)
 	userClient := client.NewUserClient(cfg.AuthServiceURL)
