@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -32,12 +33,19 @@ public class RegisterService implements RegisterUseCase {
     @Override
     @Transactional
     public AuthResult register(RegisterCommand cmd) {
-        if (userPort.existsByEmail(cmd.email())) {
+        String username = normalizeUsername(cmd.username());
+        String email = normalizeEmail(cmd.email());
+
+        if (userPort.existsByUsername(username)) {
+            throw ApplicationException.conflict("Username already in use");
+        }
+        if (userPort.existsByEmail(email)) {
             throw ApplicationException.conflict("Email already in use");
         }
 
         User user = User.builder()
-                .email(cmd.email())
+                .username(username)
+                .email(email)
                 .passwordHash(passwordHashPort.hash(cmd.rawPassword()))
                 .provider(AuthProvider.LOCAL)
                 .verified(false)
@@ -47,7 +55,7 @@ public class RegisterService implements RegisterUseCase {
 
         user = userPort.save(user);
 
-        publishRegisteredEvent(user, displayNameFrom(cmd));
+        publishRegisteredEvent(user, displayNameFrom(cmd, username));
 
         String verifyToken = emailVerificationPort.createToken(user.getId());
         emailVerificationPort.sendVerificationEmail(user.getEmail(), verifyToken);
@@ -62,6 +70,7 @@ public class RegisterService implements RegisterUseCase {
         try {
             String payload = objectMapper.writeValueAsString(Map.of(
                     "userId", user.getId().toString(),
+                    "username", user.getUsername(),
                     "email", user.getEmail(),
                     "displayName", displayName
             ));
@@ -77,7 +86,17 @@ public class RegisterService implements RegisterUseCase {
         }
     }
 
-    private String displayNameFrom(RegisterCommand cmd) {
-        return cmd.displayName() != null ? cmd.displayName() : cmd.email().split("@")[0];
+    private String displayNameFrom(RegisterCommand cmd, String username) {
+        return cmd.displayName() != null && !cmd.displayName().isBlank()
+                ? cmd.displayName().trim()
+                : username;
+    }
+
+    private String normalizeUsername(String username) {
+        return username.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }

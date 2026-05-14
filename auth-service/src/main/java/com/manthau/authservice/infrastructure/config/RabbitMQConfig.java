@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String USER_EXCHANGE = "user.registered";
+    public static final String USER_EXCHANGE = "user.exchange";
 
     @Bean
     TopicExchange userRegisteredExchange() {

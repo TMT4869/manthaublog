@@ -1,3 +1,3 @@
 package com.manthau.authservice.application.dto;
 
-public record LoginCommand(String email, String rawPassword) {}
+public record LoginCommand(String identifier, String rawPassword) {}

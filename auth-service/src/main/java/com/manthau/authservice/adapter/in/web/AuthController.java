@@ -27,13 +27,13 @@ public class AuthController {
     @PostMapping("/register")
     ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
         var result = registerUseCase.register(
-                new RegisterCommand(req.email(), req.password(), req.displayName()));
+                new RegisterCommand(req.username(), req.email(), req.password(), req.displayName()));
         return ResponseEntity.status(HttpStatus.CREATED).body(AuthResponse.from(result));
     }
 
     @PostMapping("/login")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest req) {
-        var result = loginUseCase.login(new LoginCommand(req.email(), req.password()));
+        var result = loginUseCase.login(new LoginCommand(req.loginIdentifier(), req.password()));
         return ResponseEntity.ok(AuthResponse.from(result));
     }
 

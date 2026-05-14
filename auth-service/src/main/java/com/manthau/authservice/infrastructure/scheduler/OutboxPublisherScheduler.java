@@ -1,5 +1,7 @@
 package com.manthau.authservice.infrastructure.scheduler;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manthau.authservice.adapter.out.persistence.entity.OutboxEventEntity;
 import com.manthau.authservice.adapter.out.persistence.jpa.OutboxEventJpaRepository;
 import com.manthau.authservice.infrastructure.config.RabbitMQConfig;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class OutboxPublisherScheduler {
 
     private final OutboxEventJpaRepository outboxRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelay = 1000)
     @Transactional
@@ -30,7 +34,7 @@ public class OutboxPublisherScheduler {
                 rabbitTemplate.convertAndSend(
                         RabbitMQConfig.USER_EXCHANGE,
                         event.getEventType(),
-                        event.getPayload()
+                        objectMapper.readValue(event.getPayload(), new TypeReference<Map<String, Object>>() {})
                 );
                 event.setPublishedAt(LocalDateTime.now());
                 outboxRepository.save(event);

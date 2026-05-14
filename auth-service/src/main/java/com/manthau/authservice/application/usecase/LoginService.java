@@ -14,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class LoginService implements LoginUseCase {
@@ -26,7 +29,8 @@ public class LoginService implements LoginUseCase {
     @Override
     @Transactional
     public AuthResult login(LoginCommand cmd) {
-        User user = userPort.findByEmail(cmd.email())
+        String identifier = normalizeIdentifier(cmd.identifier());
+        User user = findByIdentifier(identifier)
                 .orElseThrow(() -> ApplicationException.unauthorized("Invalid credentials"));
 
         if (user.getProvider() != AuthProvider.LOCAL) {
@@ -43,5 +47,16 @@ public class LoginService implements LoginUseCase {
         String refreshToken = refreshTokenPort.issue(user.getId());
 
         return new AuthResult(accessToken, refreshToken, accessTokenPort.expiresInSeconds());
+    }
+
+    private Optional<User> findByIdentifier(String identifier) {
+        if (identifier.contains("@")) {
+            return userPort.findByEmail(identifier);
+        }
+        return userPort.findByUsername(identifier);
+    }
+
+    private String normalizeIdentifier(String identifier) {
+        return identifier.trim().toLowerCase(Locale.ROOT);
     }
 }

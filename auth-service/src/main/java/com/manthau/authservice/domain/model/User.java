@@ -14,6 +14,7 @@ import java.util.UUID;
 @Builder
 public class User {
     private UUID id;
+    private String username;
     private String email;
     private String passwordHash;
     private AuthProvider provider;

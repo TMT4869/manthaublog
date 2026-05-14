@@ -23,6 +23,11 @@ public class UserPersistenceAdapter implements UserPort {
     }
 
     @Override
+    public Optional<User> findByUsername(String username) {
+        return jpaRepository.findByUsername(username).map(this::toDomain);
+    }
+
+    @Override
     public Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId) {
         return jpaRepository.findByProviderAndProviderId(provider, providerId).map(this::toDomain);
     }
@@ -38,6 +43,11 @@ public class UserPersistenceAdapter implements UserPort {
     }
 
     @Override
+    public boolean existsByUsername(String username) {
+        return jpaRepository.existsByUsername(username);
+    }
+
+    @Override
     public User save(User user) {
         UserAuthEntity entity = toEntity(user);
         return toDomain(jpaRepository.save(entity));
@@ -46,6 +56,7 @@ public class UserPersistenceAdapter implements UserPort {
     private User toDomain(UserAuthEntity e) {
         return User.builder()
                 .id(e.getId())
+                .username(e.getUsername())
                 .email(e.getEmail())
                 .passwordHash(e.getPasswordHash())
                 .provider(e.getProvider())
@@ -60,6 +71,7 @@ public class UserPersistenceAdapter implements UserPort {
     private UserAuthEntity toEntity(User u) {
         return UserAuthEntity.builder()
                 .id(u.getId())
+                .username(u.getUsername())
                 .email(u.getEmail())
                 .passwordHash(u.getPasswordHash())
                 .provider(u.getProvider())
