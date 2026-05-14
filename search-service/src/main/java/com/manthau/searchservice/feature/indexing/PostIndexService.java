@@ -15,10 +15,12 @@ public class PostIndexService {
 
     private final PostDocumentRepository repository;
     private final PostIndexClient indexClient;
+    private final AuthorProfileClient authorProfileClient;
 
     public void indexPost(UUID postId) {
         InternalPostDto dto = indexClient.fetchPost(postId);
-        PostDocument doc = PostDocument.from(dto);
+        AuthorProfileDto author = fetchAuthorProfile(dto);
+        PostDocument doc = PostDocument.from(dto, author);
         repository.save(doc);
         log.info("Indexed post {}", postId);
     }
@@ -27,6 +29,19 @@ public class PostIndexService {
         if (repository.existsById(postId)) {
             repository.deleteById(postId);
             log.info("Unindexed post {}", postId);
+        }
+    }
+
+    private AuthorProfileDto fetchAuthorProfile(InternalPostDto dto) {
+        if (dto.authorId() == null || dto.authorId().isBlank()) {
+            return null;
+        }
+
+        try {
+            return authorProfileClient.fetchAuthor(dto.authorId());
+        } catch (Exception ex) {
+            log.warn("Unable to enrich author profile for postId={}, authorId={}", dto.id(), dto.authorId(), ex);
+            return null;
         }
     }
 }

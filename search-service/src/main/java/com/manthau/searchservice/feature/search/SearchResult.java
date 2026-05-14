@@ -14,6 +14,9 @@ public record SearchResult(
         String language,
         List<String> tags,
         String authorId,
+        String authorName,
+        String authorNameTag,
+        String authorFullDisplayName,
         Instant publishedAt
 ) implements Serializable {
 
@@ -26,6 +29,9 @@ public record SearchResult(
                 doc.getLanguage(),
                 doc.getTags(),
                 doc.getAuthorId(),
+                doc.getAuthorName(),
+                doc.getAuthorNameTag(),
+                doc.getAuthorFullDisplayName(),
                 doc.getPublishedAt()
         );
     }

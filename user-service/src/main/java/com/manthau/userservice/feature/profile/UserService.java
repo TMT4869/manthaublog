@@ -2,12 +2,14 @@ package com.manthau.userservice.feature.profile;
 
 import com.manthau.userservice.feature.follow.FollowRepository;
 import com.manthau.userservice.shared.cache.CacheService;
+import com.manthau.userservice.shared.exception.DisplayNameAlreadyExistsException;
 import com.manthau.userservice.shared.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -19,6 +21,9 @@ public class UserService {
     private final UserProfileMapper userProfileMapper;
     private final CacheService cacheService;
     private final FollowRepository followRepository;
+    private final NameTagGenerator nameTagGenerator;
+
+    private static final int MAX_NAME_TAG_GENERATION_ATTEMPTS = 20;
 
     // =================== READ ===================
 
@@ -67,6 +72,7 @@ public class UserService {
     public UserProfileResponse updateProfile(UUID userId, UpdateProfileRequest request) {
         UserProfile profile = findActiveUserOrThrow(userId);
 
+        updateDisplayName(profile, request);
         userProfileMapper.updateEntity(profile, request);
         userProfileRepository.save(profile);
 
@@ -151,13 +157,76 @@ public class UserService {
             log.warn("Profile already exists for userId: {}", userId);
             return;
         }
+        String normalizedDisplayName = normalizeDisplayName(firstNonBlank(displayName, username));
+        String nameTag = generateUniqueNameTag(normalizedDisplayName);
         UserProfile profile = UserProfile.builder()
                 .id(userId)
                 .username(username)
-                .displayName(displayName)
+                .displayName(normalizedDisplayName)
+                .nameTag(nameTag)
                 .status(UserStatus.ACTIVE)
                 .build();
         userProfileRepository.save(profile);
         log.info("Created profile for user: {}", username);
+    }
+
+    private void updateDisplayName(UserProfile profile, UpdateProfileRequest request) {
+        if (request.getDisplayName() == null && request.getNameTag() == null) {
+            return;
+        }
+
+        String displayName = request.getDisplayName() != null
+                ? normalizeDisplayName(request.getDisplayName())
+                : profile.getDisplayName();
+        String nameTag = request.getNameTag() != null
+                ? normalizeNameTag(request.getNameTag())
+                : profile.getNameTag();
+
+        if (nameTag == null || nameTag.isBlank()) {
+            nameTag = generateUniqueNameTag(displayName);
+        }
+
+        if (userProfileRepository.existsByDisplayNameAndNameTagAndIdNot(displayName, nameTag, profile.getId())) {
+            throw new DisplayNameAlreadyExistsException(displayName, nameTag);
+        }
+
+        profile.setDisplayName(displayName);
+        profile.setNameTag(nameTag);
+    }
+
+    private String generateUniqueNameTag(String displayName) {
+        for (int i = 0; i < MAX_NAME_TAG_GENERATION_ATTEMPTS; i++) {
+            String nameTag = nameTagGenerator.generate();
+            if (!userProfileRepository.existsByDisplayNameAndNameTag(displayName, nameTag)) {
+                return nameTag;
+            }
+        }
+        throw new IllegalStateException("Unable to generate unique name tag");
+    }
+
+    private String normalizeDisplayName(String displayName) {
+        if (displayName == null || displayName.isBlank()) {
+            throw new IllegalArgumentException("Display name must not be blank");
+        }
+        String normalized = displayName.trim();
+        if (normalized.length() > 100) {
+            throw new IllegalArgumentException("Display name must not exceed 100 characters");
+        }
+        return normalized;
+    }
+
+    private String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred;
+        }
+        return fallback;
+    }
+
+    private String normalizeNameTag(String nameTag) {
+        String normalized = nameTag.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.matches("[A-Z0-9]{6}")) {
+            throw new IllegalArgumentException("Name tag must be exactly 6 letters or digits");
+        }
+        return normalized;
     }
 }

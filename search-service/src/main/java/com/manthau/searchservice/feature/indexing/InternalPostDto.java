@@ -6,6 +6,8 @@ import java.util.List;
 public record InternalPostDto(
         String id,
         String authorId,
+        String authorName,
+        String authorNameTag,
         String title,
         String slug,
         String excerpt,

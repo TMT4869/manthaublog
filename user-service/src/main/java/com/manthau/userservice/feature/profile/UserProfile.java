@@ -9,7 +9,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "user_profiles")
+@Table(
+        name = "user_profiles",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_user_profiles_display_name_tag",
+                columnNames = {"display_name", "name_tag"}
+        )
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +32,9 @@ public class UserProfile {
 
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
+
+    @Column(name = "name_tag", length = 6)
+    private String nameTag;
 
     @Column(columnDefinition = "TEXT")
     private String bio;
@@ -64,4 +73,11 @@ public class UserProfile {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public String getFullDisplayName() {
+        if (nameTag == null || nameTag.isBlank()) {
+            return displayName;
+        }
+        return displayName + "#" + nameTag;
+    }
 }

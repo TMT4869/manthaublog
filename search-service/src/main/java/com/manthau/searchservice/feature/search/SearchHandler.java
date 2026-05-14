@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -26,30 +27,42 @@ public class SearchHandler {
     private static final int MAX_SUGGESTIONS = 5;
     private static final Duration SUGGESTIONS_TTL = Duration.ofHours(1);
 
-    public List<SearchResult> search(String q, String lang, String tag) {
-        Query esQuery;
-
-        if (tag != null && !tag.isBlank()) {
-            esQuery = Query.of(qb -> qb.bool(b -> b
-                    .must(m -> m.term(t -> t.field("tags").value(tag)))
-                    .filter(f -> f.term(t -> t.field("status").value("published")))
-            ));
-        } else if (q != null && !q.isBlank()) {
-            final String langFinal = (lang != null && !lang.isBlank()) ? lang : null;
-            esQuery = Query.of(qb -> qb.bool(b -> {
-                b.must(m -> m.multiMatch(mm -> mm
-                        .query(q)
-                        .fields("title^3", "excerpt^2", "content")
-                ));
-                b.filter(f -> f.term(t -> t.field("status").value("published")));
-                if (langFinal != null) {
-                    b.filter(f -> f.term(t -> t.field("language").value(langFinal)));
-                }
-                return b;
-            }));
-        } else {
+    public List<SearchResult> search(String q, String lang, String tag, String author) {
+        if (!hasText(q) && !hasText(tag) && !hasText(author)) {
             return List.of();
         }
+
+        final String query = normalized(q);
+        final String language = normalized(lang);
+        final String tagSlug = normalized(tag);
+        final String authorQuery = normalized(author);
+        final String authorNameTagQuery = authorQuery != null ? authorQuery.toUpperCase(Locale.ROOT) : null;
+
+        Query esQuery = Query.of(qb -> qb.bool(b -> {
+            if (query != null) {
+                b.must(m -> m.multiMatch(mm -> mm
+                        .query(query)
+                        .fields("title^3", "excerpt^2", "author_name^2", "author_name_tag", "content")
+                ));
+            }
+
+            if (authorQuery != null) {
+                b.must(m -> m.bool(authorBool -> authorBool
+                        .should(s -> s.matchPhrasePrefix(mp -> mp.field("author_name").query(authorQuery)))
+                        .should(s -> s.prefix(p -> p.field("author_name_tag").value(authorNameTagQuery)))
+                        .minimumShouldMatch("1")
+                ));
+            }
+
+            b.filter(f -> f.term(t -> t.field("status").value("published")));
+            if (language != null) {
+                b.filter(f -> f.term(t -> t.field("language").value(language)));
+            }
+            if (tagSlug != null) {
+                b.filter(f -> f.term(t -> t.field("tags").value(tagSlug)));
+            }
+            return b;
+        }));
 
         NativeQuery nativeQuery = NativeQuery.builder()
                 .withQuery(esQuery)
@@ -97,5 +110,13 @@ public class SearchHandler {
             redisTemplate.opsForValue().set(cacheKey, (Object) suggestions, SUGGESTIONS_TTL);
         }
         return suggestions;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String normalized(String value) {
+        return hasText(value) ? value.trim() : null;
     }
 }

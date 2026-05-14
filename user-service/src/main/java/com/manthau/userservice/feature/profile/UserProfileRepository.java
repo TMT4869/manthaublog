@@ -16,6 +16,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     boolean existsByUsername(String username);
 
+    boolean existsByDisplayNameAndNameTag(String displayName, String nameTag);
+
+    boolean existsByDisplayNameAndNameTagAndIdNot(String displayName, String nameTag, UUID id);
+
     @Modifying
     @Query("UPDATE UserProfile u SET u.followersCount = u.followersCount + 1 WHERE u.id = :userId")
     void incrementFollowersCount(@Param("userId") UUID userId);

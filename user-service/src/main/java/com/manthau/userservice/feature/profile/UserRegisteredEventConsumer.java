@@ -15,7 +15,15 @@ public class UserRegisteredEventConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.USER_REGISTERED_QUEUE)
     public void handle(UserRegisteredEvent event) {
-        log.info("Received UserRegisteredEvent for: {}", event.getUsername());
-        userService.createProfile(event.getUserId(), event.getUsername(), event.getDisplayName());
+        String username = usernameFrom(event);
+        log.info("Received UserRegisteredEvent for: {}", username);
+        userService.createProfile(event.getUserId(), username, event.getDisplayName());
+    }
+
+    private String usernameFrom(UserRegisteredEvent event) {
+        if (event.getUsername() != null && !event.getUsername().isBlank()) {
+            return event.getUsername().trim();
+        }
+        return event.getEmail().split("@")[0];
     }
 }

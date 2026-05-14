@@ -19,7 +19,7 @@ public interface FollowRepository extends JpaRepository<Follow, Follow.FollowId>
     // Lấy thông tin followers của 1 user (ai đang follow user này)
     @Query("""
         SELECT new FollowUserResponse(
-            u.id, u.username, u.displayName, u.avatarUrl)
+            u.id, u.username, u.displayName, u.nameTag, u.avatarUrl)
         FROM Follow f
         JOIN UserProfile u ON u.id = f.id.followerId
         WHERE f.id.followingId = :userId
@@ -29,7 +29,7 @@ public interface FollowRepository extends JpaRepository<Follow, Follow.FollowId>
     // Lấy thông tin following của 1 user (user này đang follow ai)
     @Query("""
         SELECT new FollowUserResponse(
-            u.id, u.username, u.displayName, u.avatarUrl)
+            u.id, u.username, u.displayName, u.nameTag, u.avatarUrl)
         FROM Follow f
         JOIN UserProfile u ON u.id = f.id.followingId
         WHERE f.id.followerId = :userId

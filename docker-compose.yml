@@ -178,6 +178,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      user-service:
+        condition: service_started
     restart: unless-stopped
 
   notification-service:

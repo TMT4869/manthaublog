@@ -12,6 +12,8 @@ public class UserProfileResponse {
     private UUID id;
     private String username;
     private String displayName;
+    private String nameTag;
+    private String fullDisplayName;
     private String bio;
     private String avatarUrl;
     private String website;
