@@ -1,11 +1,14 @@
 package com.manthau.postservice.post.create;
 
+import com.manthau.postservice.category.domain.Category;
+import com.manthau.postservice.category.domain.CategoryRepository;
 import com.manthau.postservice.infrastructure.language.LanguageDetectionService;
 import com.manthau.postservice.infrastructure.markdown.MarkdownRenderer;
 import com.manthau.postservice.infrastructure.toc.TocBuilder;
 import com.manthau.postservice.post.domain.Post;
 import com.manthau.postservice.post.domain.PostRepository;
 import com.manthau.postservice.post.get.PostDetailDto;
+import com.manthau.postservice.shared.exception.NotFoundException;
 import com.manthau.postservice.shared.security.UserPrincipal;
 import com.manthau.postservice.shared.util.ReadingTimeUtils;
 import com.manthau.postservice.shared.util.SlugUtils;
@@ -24,6 +27,7 @@ import java.util.*;
 public class CreatePostHandler {
 
     private final PostRepository postRepository;
+    private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
     private final MarkdownRenderer markdownRenderer;
     private final TocBuilder tocBuilder;
@@ -36,6 +40,7 @@ public class CreatePostHandler {
         List<Map<String, Object>> toc = tocBuilder.build(html);
         String lang = languageDetectionService.detect(req.content());
         int readingTime = ReadingTimeUtils.estimate(req.content());
+        Category category = findCategory(req.categorySlug());
 
         Post post = Post.builder()
                 .authorId(user.userId())
@@ -45,6 +50,7 @@ public class CreatePostHandler {
                 .contentHtml(html)
                 .excerpt(req.excerpt())
                 .coverImageUrl(req.coverImageUrl())
+                .category(category)
                 .language(lang)
                 .toc(toc)
                 .readingTimeMinutes((short) readingTime)
@@ -62,6 +68,11 @@ public class CreatePostHandler {
             slug = base + "-" + suffix++;
         }
         return slug;
+    }
+
+    private Category findCategory(String categorySlug) {
+        return categoryRepository.findBySlug(categorySlug)
+                .orElseThrow(() -> new NotFoundException("Category not found"));
     }
 
     private void attachTags(Post post, List<String> tagSlugs) {

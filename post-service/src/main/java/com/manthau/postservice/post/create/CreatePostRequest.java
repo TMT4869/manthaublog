@@ -10,5 +10,6 @@ public record CreatePostRequest(
         @NotBlank String content,
         @Size(max = 500) String excerpt,
         @Size(max = 500) String coverImageUrl,
+        @NotBlank String categorySlug,
         List<String> tagSlugs
 ) {}

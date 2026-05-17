@@ -16,6 +16,8 @@ func Setup(rdb *redis.Client, cfg *config.Config) *gin.Engine {
 
 	// Public routes — no JWT required
 	r.Any("/auth/*path", proxy.NewReverseProxy(cfg.AuthServiceURL))
+	r.GET("/api/categories", proxy.NewReverseProxy(cfg.PostServiceURL))
+	r.GET("/api/categories/*path", proxy.NewReverseProxy(cfg.PostServiceURL))
 
 	// Protected routes
 	protected := r.Group("/api")
@@ -38,6 +40,8 @@ func Setup(rdb *redis.Client, cfg *config.Config) *gin.Engine {
 	admin.Use(middleware.RateLimitMiddleware(rdb))
 	{
 		admin.Any("/posts/*path", proxy.NewReverseProxy(cfg.PostServiceURL))
+		admin.Any("/categories", proxy.NewReverseProxy(cfg.PostServiceURL))
+		admin.Any("/categories/*path", proxy.NewReverseProxy(cfg.PostServiceURL))
 	}
 
 	return r

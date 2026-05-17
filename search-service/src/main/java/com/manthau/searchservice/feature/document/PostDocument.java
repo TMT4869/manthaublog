@@ -47,6 +47,9 @@ public class PostDocument {
     @Field(type = FieldType.Keyword)
     private List<String> tags;
 
+    @Field(type = FieldType.Keyword, name = "category_slug")
+    private String categorySlug;
+
     @Field(type = FieldType.Keyword)
     private String language;
 
@@ -73,6 +76,7 @@ public class PostDocument {
                 .authorName(firstNonBlank(author != null ? author.displayName() : null, dto.authorName()))
                 .authorNameTag(firstNonBlank(author != null ? author.nameTag() : null, dto.authorNameTag()))
                 .tags(dto.tags())
+                .categorySlug(dto.categorySlug())
                 .language(dto.language())
                 .status("published")
                 .publishedAt(dto.publishedAt())

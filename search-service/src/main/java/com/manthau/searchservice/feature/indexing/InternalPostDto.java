@@ -13,6 +13,7 @@ public record InternalPostDto(
         String excerpt,
         String content,
         String language,
+        String categorySlug,
         List<String> tags,
         Instant publishedAt
 ) {}

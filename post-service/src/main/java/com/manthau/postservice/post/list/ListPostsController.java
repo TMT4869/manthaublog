@@ -16,9 +16,10 @@ public class ListPostsController {
     public Page<PostSummaryDto> list(
             @RequestParam(required = false) String lang,
             @RequestParam(required = false) UUID authorId,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return handler.handle(lang, authorId, page, size);
+        return handler.handle(lang, authorId, category, page, size);
     }
 }

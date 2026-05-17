@@ -13,6 +13,7 @@ public record InternalPostDto(
         String excerpt,
         String content,
         String language,
+        String categorySlug,
         List<String> tags,
         Instant publishedAt
 ) {
@@ -29,6 +30,7 @@ public record InternalPostDto(
                 post.getExcerpt(),
                 post.getContent(),
                 post.getLanguage(),
+                post.getCategory().getSlug(),
                 tagSlugs,
                 post.getPublishedAt()
         );

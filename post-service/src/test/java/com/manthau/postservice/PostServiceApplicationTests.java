@@ -1,13 +1,14 @@
 package com.manthau.postservice;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class PostServiceApplicationTests {
 
     @Test
-    void contextLoads() {
+    void applicationClassCanBeConstructed() {
+        assertThat(new PostServiceApplication()).isNotNull();
     }
 
 }

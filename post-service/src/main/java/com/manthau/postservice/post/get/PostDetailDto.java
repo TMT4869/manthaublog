@@ -1,5 +1,6 @@
 package com.manthau.postservice.post.get;
 
+import com.manthau.postservice.category.dto.CategorySummaryDto;
 import com.manthau.postservice.post.domain.Post;
 import com.manthau.postservice.post.domain.PostStatus;
 
@@ -22,6 +23,7 @@ public record PostDetailDto(
         PostStatus status,
         int readingTimeMinutes,
         long viewCount,
+        CategorySummaryDto category,
         List<String> tags,
         Instant publishedAt,
         Instant createdAt,
@@ -37,7 +39,8 @@ public record PostDetailDto(
                 post.getContent(), post.getContentHtml(), post.getExcerpt(),
                 post.getCoverImageUrl(), post.getLanguage(), post.getToc(),
                 post.getStatus(), post.getReadingTimeMinutes(), post.getViewCount(),
-                tags, post.getPublishedAt(), post.getCreatedAt(), post.getUpdatedAt()
+                CategorySummaryDto.from(post.getCategory()), tags,
+                post.getPublishedAt(), post.getCreatedAt(), post.getUpdatedAt()
         );
     }
 }

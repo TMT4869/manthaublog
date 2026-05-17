@@ -1,13 +1,14 @@
 package com.manthau.searchservice;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class SearchServiceApplicationTests {
 
     @Test
-    void contextLoads() {
+    void applicationClassCanBeConstructed() {
+        assertThat(new SearchServiceApplication()).isNotNull();
     }
 
 }

@@ -1,5 +1,7 @@
 package com.manthau.postservice.post.update;
 
+import com.manthau.postservice.category.domain.Category;
+import com.manthau.postservice.category.domain.CategoryRepository;
 import com.manthau.postservice.infrastructure.language.LanguageDetectionService;
 import com.manthau.postservice.infrastructure.markdown.MarkdownRenderer;
 import com.manthau.postservice.infrastructure.toc.TocBuilder;
@@ -28,6 +30,7 @@ import java.util.*;
 public class UpdatePostHandler {
 
     private final PostRepository postRepository;
+    private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
     private final MarkdownRenderer markdownRenderer;
     private final TocBuilder tocBuilder;
@@ -50,12 +53,14 @@ public class UpdatePostHandler {
         List<Map<String, Object>> toc = tocBuilder.build(html);
         String lang = languageDetectionService.detect(req.content());
         int readingTime = ReadingTimeUtils.estimate(req.content());
+        Category category = findCategory(req.categorySlug());
 
         post.setTitle(req.title());
         post.setContent(req.content());
         post.setContentHtml(html);
         post.setExcerpt(req.excerpt());
         post.setCoverImageUrl(req.coverImageUrl());
+        post.setCategory(category);
         post.setLanguage(lang);
         post.setToc(toc);
         post.setReadingTimeMinutes((short) readingTime);
@@ -66,6 +71,11 @@ public class UpdatePostHandler {
         Post saved = postRepository.save(post);
         redisTemplate.delete("post:" + postId);
         return PostDetailDto.from(saved);
+    }
+
+    private Category findCategory(String categorySlug) {
+        return categoryRepository.findBySlug(categorySlug)
+                .orElseThrow(() -> new NotFoundException("Category not found"));
     }
 
     private void attachTags(Post post, List<String> tagSlugs) {

@@ -1,5 +1,6 @@
 package com.manthau.searchservice.feature.search;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery.Builder;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.manthau.searchservice.feature.document.PostDocument;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -27,45 +27,13 @@ public class SearchHandler {
     private static final int MAX_SUGGESTIONS = 5;
     private static final Duration SUGGESTIONS_TTL = Duration.ofHours(1);
 
-    public List<SearchResult> search(String q, String lang, String tag, String author) {
-        if (!hasText(q) && !hasText(tag) && !hasText(author)) {
+    public List<SearchResult> search(SearchCriteria criteria) {
+        if (criteria.isEmpty()) {
             return List.of();
         }
 
-        final String query = normalized(q);
-        final String language = normalized(lang);
-        final String tagSlug = normalized(tag);
-        final String authorQuery = normalized(author);
-        final String authorNameTagQuery = authorQuery != null ? authorQuery.toUpperCase(Locale.ROOT) : null;
-
-        Query esQuery = Query.of(qb -> qb.bool(b -> {
-            if (query != null) {
-                b.must(m -> m.multiMatch(mm -> mm
-                        .query(query)
-                        .fields("title^3", "excerpt^2", "author_name^2", "author_name_tag", "content")
-                ));
-            }
-
-            if (authorQuery != null) {
-                b.must(m -> m.bool(authorBool -> authorBool
-                        .should(s -> s.matchPhrasePrefix(mp -> mp.field("author_name").query(authorQuery)))
-                        .should(s -> s.prefix(p -> p.field("author_name_tag").value(authorNameTagQuery)))
-                        .minimumShouldMatch("1")
-                ));
-            }
-
-            b.filter(f -> f.term(t -> t.field("status").value("published")));
-            if (language != null) {
-                b.filter(f -> f.term(t -> t.field("language").value(language)));
-            }
-            if (tagSlug != null) {
-                b.filter(f -> f.term(t -> t.field("tags").value(tagSlug)));
-            }
-            return b;
-        }));
-
         NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(esQuery)
+                .withQuery(buildSearchQuery(criteria))
                 .withMaxResults(MAX_RESULTS)
                 .build();
 
@@ -74,6 +42,53 @@ public class SearchHandler {
                 .map(SearchHit::getContent)
                 .map(SearchResult::from)
                 .toList();
+    }
+
+    private Query buildSearchQuery(SearchCriteria criteria) {
+        return Query.of(qb -> qb.bool(b -> {
+            addKeywordQuery(b, criteria);
+            addAuthorQuery(b, criteria);
+            addPublishedFilter(b);
+            addTermFilter(b, "language", criteria.language());
+            addTermFilter(b, "tags", criteria.tagSlug());
+            addTermFilter(b, "category_slug", criteria.categorySlug());
+            return b;
+        }));
+    }
+
+    private void addKeywordQuery(Builder builder, SearchCriteria criteria) {
+        if (criteria.query() == null) {
+            return;
+        }
+
+        builder.must(m -> m.multiMatch(mm -> mm
+                .query(criteria.query())
+                .fields("title^3", "excerpt^2", "author_name^2", "author_name_tag", "content")
+        ));
+    }
+
+    private void addAuthorQuery(Builder builder, SearchCriteria criteria) {
+        if (criteria.authorQuery() == null) {
+            return;
+        }
+
+        builder.must(m -> m.bool(authorBool -> authorBool
+                .should(s -> s.matchPhrasePrefix(mp -> mp.field("author_name").query(criteria.authorQuery())))
+                .should(s -> s.prefix(p -> p.field("author_name_tag").value(criteria.authorNameTagQuery())))
+                .minimumShouldMatch("1")
+        ));
+    }
+
+    private void addPublishedFilter(Builder builder) {
+        addTermFilter(builder, "status", "published");
+    }
+
+    private void addTermFilter(Builder builder, String field, String value) {
+        if (value == null) {
+            return;
+        }
+
+        builder.filter(f -> f.term(t -> t.field(field).value(value)));
     }
 
     @SuppressWarnings("unchecked")
@@ -85,8 +100,8 @@ public class SearchHandler {
         if (cached instanceof List<?> list && !list.isEmpty()) {
             try {
                 return (List<SuggestionResult>) list;
-            } catch (ClassCastException ignored) {
-                log.warn("Stale suggestion cache entry for key={}", cacheKey);
+            } catch (ClassCastException e) {
+                log.warn("Stale suggestion cache entry for key={}", cacheKey, e);
             }
         }
 
@@ -107,16 +122,9 @@ public class SearchHandler {
                 .toList();
 
         if (!suggestions.isEmpty()) {
-            redisTemplate.opsForValue().set(cacheKey, (Object) suggestions, SUGGESTIONS_TTL);
+            redisTemplate.opsForValue().set(cacheKey, suggestions, SUGGESTIONS_TTL);
         }
         return suggestions;
     }
 
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
-
-    private String normalized(String value) {
-        return hasText(value) ? value.trim() : null;
-    }
 }

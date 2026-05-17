@@ -26,7 +26,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/{slug}", "/api/tags", "/api/tags/{slug}/posts").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/posts", "/api/posts/{slug}",
+                                "/api/tags", "/api/tags/{slug}/posts",
+                                "/api/categories", "/api/categories/{slug}/posts"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/internal/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")

@@ -18,9 +18,10 @@ public class SearchController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String lang,
             @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String category,
             @RequestParam(required = false) String author
     ) {
-        return handler.search(q, lang, tag, author);
+        return handler.search(new SearchCriteria(q, lang, tag, category, author));
     }
 
     @GetMapping("/api/search/suggestions")

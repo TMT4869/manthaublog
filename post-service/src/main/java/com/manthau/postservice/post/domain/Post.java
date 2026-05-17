@@ -1,5 +1,6 @@
 package com.manthau.postservice.post.domain;
 
+import com.manthau.postservice.category.domain.Category;
 import com.manthau.postservice.tag.domain.PostTag;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,6 +42,10 @@ public class Post {
 
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @Column(length = 10)
     @Builder.Default
