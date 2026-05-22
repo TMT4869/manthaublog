@@ -67,7 +67,7 @@ RABBITMQ_DEFAULT_PASS=your_rabbitmq_password
 MINIO_ROOT_PASSWORD=your_minio_password
 ```
 
-Then set service-specific secrets (JWT secret, OAuth2 client credentials, etc.) in each service's `.env` file.
+Then set service-specific secrets (OAuth2 client credentials, SMTP credentials, etc.) in each service's `.env` file. JWT verification uses the auth service JWKS endpoint; only `auth-service` needs a private signing key if you do not want an ephemeral development key.
 
 ### 3. Start all services
 

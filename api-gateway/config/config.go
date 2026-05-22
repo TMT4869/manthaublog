@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	Port                   string
-	JWTSecret              string
+	JWKSURI                string
 	RedisAddr              string
 	AuthServiceURL         string
 	UserServiceURL         string
@@ -24,7 +24,7 @@ func Load() *Config {
 	_ = godotenv.Load()
 	return &Config{
 		Port:                   getEnv("PORT", "8080"),
-		JWTSecret:              getEnv("JWT_SECRET", "secret"),
+		JWKSURI:                getEnv("JWT_JWKS_URI", "http://localhost:8081/.well-known/jwks.json"),
 		RedisAddr:              getEnv("REDIS_ADDR", "localhost:6379"),
 		AuthServiceURL:         getEnv("AUTH_SERVICE_URL", "http://localhost:8081"),
 		UserServiceURL:         getEnv("USER_SERVICE_URL", "http://localhost:8082"),

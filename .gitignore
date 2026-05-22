@@ -1,6 +1,7 @@
 ### Secrets ###
 .env
 **/.env
+auth-service/jwks.json
 
 ### VS Code ###
 .vscode/

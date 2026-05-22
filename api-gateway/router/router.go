@@ -19,23 +19,25 @@ func Setup(rdb *redis.Client, cfg *config.Config) *gin.Engine {
 	r.GET("/api/categories", proxy.NewReverseProxy(cfg.PostServiceURL))
 	r.GET("/api/categories/*path", proxy.NewReverseProxy(cfg.PostServiceURL))
 
+	jwkCache := middleware.NewJWKCache(cfg.JWKSURI)
+
 	// Protected routes
 	protected := r.Group("/api")
-	protected.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+	protected.Use(middleware.JWTMiddleware(jwkCache))
 	protected.Use(middleware.RateLimitMiddleware(rdb))
 	{
-		protected.Any("/users/*path",         proxy.NewReverseProxy(cfg.UserServiceURL))
-		protected.Any("/posts/*path",         proxy.NewReverseProxy(cfg.PostServiceURL))
-		protected.Any("/comments/*path",      proxy.NewReverseProxy(cfg.CommentServiceURL))
-		protected.Any("/search/*path",        proxy.NewReverseProxy(cfg.SearchServiceURL))
+		protected.Any("/users/*path", proxy.NewReverseProxy(cfg.UserServiceURL))
+		protected.Any("/posts/*path", proxy.NewReverseProxy(cfg.PostServiceURL))
+		protected.Any("/comments/*path", proxy.NewReverseProxy(cfg.CommentServiceURL))
+		protected.Any("/search/*path", proxy.NewReverseProxy(cfg.SearchServiceURL))
 		protected.Any("/notifications/*path", proxy.NewReverseProxy(cfg.NotificationServiceURL))
-		protected.Any("/analytics/*path",     proxy.NewReverseProxy(cfg.AnalyticsServiceURL))
-		protected.Any("/media/*path",         proxy.NewReverseProxy(cfg.MediaServiceURL))
+		protected.Any("/analytics/*path", proxy.NewReverseProxy(cfg.AnalyticsServiceURL))
+		protected.Any("/media/*path", proxy.NewReverseProxy(cfg.MediaServiceURL))
 	}
 
 	// Admin-only routes — require role admin/super_admin
 	admin := r.Group("/api/admin")
-	admin.Use(middleware.JWTMiddleware(cfg.JWTSecret))
+	admin.Use(middleware.JWTMiddleware(jwkCache))
 	admin.Use(middleware.RequireRole("admin", "super_admin"))
 	admin.Use(middleware.RateLimitMiddleware(rdb))
 	{
