@@ -1,0 +1,16 @@
+### Secrets ###
+.env
+**/.env
+auth-service/jwks.json
+
+### VS Code ###
+.vscode/
+
+### IntelliJ IDEA ###
+.idea
+
+### Claude Code ###
+.claude/
+
+### Codex ###
+.codex/

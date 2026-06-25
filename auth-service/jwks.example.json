@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "replace-with-your-key-id",
+      "n": "replace-with-your-rsa-modulus-base64url",
+      "e": "AQAB"
+    }
+  ]
+}

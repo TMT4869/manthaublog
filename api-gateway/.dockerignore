@@ -1,0 +1,6 @@
+.idea/
+.git/
+*.md
+Dockerfile
+.dockerignore
+.env

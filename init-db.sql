@@ -1,0 +1,6 @@
+CREATE DATABASE auth_db;
+CREATE DATABASE user_db;
+CREATE DATABASE post_db;
+CREATE DATABASE comment_db;
+CREATE DATABASE notification_db;
+CREATE DATABASE analytics_db;
