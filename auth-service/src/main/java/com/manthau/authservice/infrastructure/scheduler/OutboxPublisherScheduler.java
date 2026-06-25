@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +37,7 @@ public class OutboxPublisherScheduler {
                         event.getEventType(),
                         objectMapper.readValue(event.getPayload(), new TypeReference<Map<String, Object>>() {})
                 );
-                event.setPublishedAt(LocalDateTime.now());
+                event.setPublishedAt(LocalDateTime.now(ZoneOffset.UTC));
                 outboxRepository.save(event);
             } catch (Exception e) {
                 log.error("Failed to publish outbox event {}: {}", event.getId(), e.getMessage());

@@ -24,7 +24,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getPublicProfile(username, requesterId));
     }
 
-    // =================== USER (đã login) ===================
+    // =================== USER (SIGNED IN) ===================
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMyProfile() {
@@ -37,7 +37,7 @@ public class UserController {
         return ResponseEntity.ok(userService.updateProfile(UserPrincipal.currentId(), request));
     }
 
-    // =================== ADMIN hoặc CHÍNH CHỦ ===================
+    // =================== ADMIN OR ACCOUNT OWNER ===================
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {

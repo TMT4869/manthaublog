@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Map;
 
@@ -43,14 +44,15 @@ public class RegisterService implements RegisterUseCase {
             throw ApplicationException.conflict("Email already in use");
         }
 
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         User user = User.builder()
                 .username(username)
                 .email(email)
                 .passwordHash(passwordHashPort.hash(cmd.rawPassword()))
                 .provider(AuthProvider.LOCAL)
                 .verified(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
 
         user = userPort.save(user);
@@ -79,7 +81,7 @@ public class RegisterService implements RegisterUseCase {
                     .aggregateId(user.getId())
                     .eventType("user.registered")
                     .payload(payload)
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(LocalDateTime.now(ZoneOffset.UTC))
                     .build());
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize outbox payload", e);

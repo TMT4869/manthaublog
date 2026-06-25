@@ -28,6 +28,10 @@ func main() {
 
 	cfg := config.Load()
 
+	if err := db.RunMigrations(cfg.DatabaseURL); err != nil {
+		logger.Fatal("migrate failed", zap.Error(err))
+	}
+
 	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Fatal("postgres connect failed", zap.Error(err))
@@ -35,9 +39,6 @@ func main() {
 	defer pool.Close()
 
 	store := db.New(pool)
-	if err := store.Migrate(context.Background()); err != nil {
-		logger.Fatal("migrate failed", zap.Error(err))
-	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddr,

@@ -5,18 +5,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
 
-@Repository
 public interface FollowRepository extends JpaRepository<Follow, Follow.FollowId> {
 
     boolean existsByIdFollowerIdAndIdFollowingId(UUID followerId, UUID followingId);
 
     void deleteByIdFollowerIdAndIdFollowingId(UUID followerId, UUID followingId);
 
-    // Lấy thông tin followers của 1 user (ai đang follow user này)
+    // Get this user's followers.
     @Query("""
         SELECT new FollowUserResponse(
             u.id, u.username, u.displayName, u.nameTag, u.avatarUrl)
@@ -26,7 +24,7 @@ public interface FollowRepository extends JpaRepository<Follow, Follow.FollowId>
         """)
     Page<FollowUserResponse> findFollowersByUserId(@Param("userId") UUID userId, Pageable pageable);
 
-    // Lấy thông tin following của 1 user (user này đang follow ai)
+    // Get the users this user is following.
     @Query("""
         SELECT new FollowUserResponse(
             u.id, u.username, u.displayName, u.nameTag, u.avatarUrl)

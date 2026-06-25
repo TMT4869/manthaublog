@@ -1,6 +1,7 @@
 package com.manthau.postservice.category.posts;
 
 import com.manthau.postservice.category.domain.CategoryRepository;
+import com.manthau.postservice.post.domain.Post;
 import com.manthau.postservice.post.domain.PostRepository;
 import com.manthau.postservice.post.domain.PostStatus;
 import com.manthau.postservice.post.list.PostSummaryDto;
@@ -24,7 +25,7 @@ public class CategoryPostsHandler {
         if (!categoryRepository.existsBySlug(categorySlug)) {
             throw new NotFoundException("Category not found");
         }
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("publishedAt").descending());
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Post::getPublishedAt).descending());
         return postRepository.findByCategorySlug(categorySlug, PostStatus.published, pageable)
                 .map(PostSummaryDto::from);
     }

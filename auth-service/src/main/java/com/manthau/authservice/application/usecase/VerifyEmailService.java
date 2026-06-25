@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class VerifyEmailService implements VerifyEmailUseCase {
                 .orElseThrow(() -> ApplicationException.notFound("User not found"));
 
         user.setVerified(true);
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now(ZoneOffset.UTC));
         userPort.save(user);
     }
 }

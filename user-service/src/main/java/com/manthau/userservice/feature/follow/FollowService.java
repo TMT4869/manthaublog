@@ -1,10 +1,10 @@
 package com.manthau.userservice.feature.follow;
 
 import com.manthau.userservice.feature.profile.UserProfile;
+import com.manthau.userservice.feature.profile.UserProfileRepository;
 import com.manthau.userservice.feature.profile.UserService;
 import com.manthau.userservice.shared.cache.CacheService;
 import com.manthau.userservice.shared.exception.AlreadyFollowingException;
-import com.manthau.userservice.feature.profile.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -35,38 +36,38 @@ public class FollowService {
     public void follow(UUID followerId, String targetUsername) {
         UserProfile target = userService.findByUsernameOrThrow(targetUsername);
 
-        // Không cho tự follow chính mình
+        // Users cannot follow themselves.
         if (followerId.equals(target.getId())) {
             throw new IllegalArgumentException("Cannot follow yourself");
         }
 
-        // Kiểm tra đã follow chưa
+        // Check whether the relationship already exists.
         if (followRepository.existsByIdFollowerIdAndIdFollowingId(followerId, target.getId())) {
             throw new AlreadyFollowingException(targetUsername);
         }
 
-        // Lưu quan hệ follow
+        // Save the follow relationship.
         Follow follow = new Follow(new Follow.FollowId(followerId, target.getId()), null);
         followRepository.save(follow);
 
-        // Cập nhật counter (denormalized)
+        // Update denormalized counters.
         userProfileRepository.incrementFollowersCount(target.getId());
         userProfileRepository.incrementFollowingCount(followerId);
 
-        // Lấy follower info để publish event
+        // Load follower info for the follow event.
         UserProfile follower = userService.findByIdOrThrow(followerId);
 
         // Invalidate cache
         cacheService.evictProfile(follower.getUsername());
         cacheService.evictProfile(target.getUsername());
 
-        // Publish event → Notification Service sẽ consume
+        // Publish the event for Notification Service to consume.
         UserFollowedEvent event = UserFollowedEvent.builder()
                 .followerId(followerId)
                 .followingId(target.getId())
                 .followerUsername(follower.getUsername())
                 .followingUsername(target.getUsername())
-                .followedAt(LocalDateTime.now())
+                .followedAt(LocalDateTime.now(ZoneOffset.UTC))
                 .build();
 
         rabbitTemplate.convertAndSend(exchange, "user.followed", event);
@@ -79,7 +80,7 @@ public class FollowService {
         UserProfile follower = userService.findByIdOrThrow(followerId);
 
         if (!followRepository.existsByIdFollowerIdAndIdFollowingId(followerId, target.getId())) {
-            return; // Idempotent — không throw nếu chưa follow
+            return; // Idempotent - do not throw when the relationship does not exist.
         }
 
         followRepository.deleteByIdFollowerIdAndIdFollowingId(followerId, target.getId());

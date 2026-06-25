@@ -45,31 +45,6 @@ func New(pool *pgxpool.Pool) *Analytics {
 	return &Analytics{pool: pool}
 }
 
-func (a *Analytics) Migrate(ctx context.Context) error {
-	_, err := a.pool.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS post_views (
-			id                BIGSERIAL PRIMARY KEY,
-			post_id           UUID NOT NULL,
-			viewer_id         UUID,
-			ip_hash           VARCHAR(64),
-			read_time_seconds INTEGER DEFAULT 0,
-			referrer          VARCHAR(255),
-			viewed_at         TIMESTAMP NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_post_views_post_id ON post_views(post_id);
-
-		CREATE TABLE IF NOT EXISTS post_stats_daily (
-			post_id               UUID    NOT NULL,
-			date                  DATE    NOT NULL,
-			views                 INTEGER DEFAULT 0,
-			unique_views          INTEGER DEFAULT 0,
-			avg_read_time_seconds INTEGER DEFAULT 0,
-			PRIMARY KEY (post_id, date)
-		);
-	`)
-	return err
-}
-
 func (a *Analytics) BatchUpsertStats(ctx context.Context, rows []StatRow) error {
 	query := `
 		INSERT INTO post_stats_daily (post_id, date, views)

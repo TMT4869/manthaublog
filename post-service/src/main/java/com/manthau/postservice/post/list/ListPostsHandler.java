@@ -1,5 +1,6 @@
 package com.manthau.postservice.post.list;
 
+import com.manthau.postservice.post.domain.Post;
 import com.manthau.postservice.post.domain.PostRepository;
 import com.manthau.postservice.post.domain.PostStatus;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class ListPostsHandler {
 
     @Transactional(readOnly = true)
     public Page<PostSummaryDto> handle(String language, UUID authorId, String categorySlug, int page, int size) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by("publishedAt").descending());
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Post::getPublishedAt).descending());
         return postRepository.findPublished(PostStatus.published, language, authorId, categorySlug, pageable)
                 .map(PostSummaryDto::from);
     }

@@ -25,7 +25,7 @@ public class UserProfile {
 
     @Id
     @Column(nullable = false, updatable = false)
-    private UUID id; // Cùng UUID với Auth Service, không auto-generate
+    private UUID id; // Same UUID as Auth Service; not auto-generated.
 
     @Column(unique = true, nullable = false, length = 50)
     private String username;
@@ -60,7 +60,7 @@ public class UserProfile {
     @Builder.Default
     private int postsCount = 0;
 
-    // ACTIVE: bình thường | BANNED: bị khóa bởi admin | DELETED: tự xóa tài khoản
+    // ACTIVE: normal | BANNED: blocked by an admin | DELETED: self-deleted account
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 @Service
@@ -23,6 +24,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     @Override
     public OAuth2User loadUser(OAuth2UserRequest request) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(request);
+
+        if (oAuth2User == null) {
+            throw new OAuth2AuthenticationException("Failed to load user from OAuth2 provider");
+        }
+
         String registrationId = request.getClientRegistration().getRegistrationId();
 
         AuthProvider provider = switch (registrationId.toLowerCase()) {
@@ -47,14 +53,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private User createUser(String email, AuthProvider provider, String providerId) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return userPort.save(User.builder()
                 .email(email)
                 .provider(provider)
                 .providerId(providerId)
                 .verified(true)
                 .role(UserRole.USER)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(now)
+                .updatedAt(now)
                 .build());
     }
 

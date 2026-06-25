@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Getter
@@ -22,7 +23,7 @@ public class RefreshToken {
     private LocalDateTime createdAt;
 
     public boolean isExpired() {
-        return expiresAt.isBefore(LocalDateTime.now());
+        return expiresAt.isBefore(LocalDateTime.now(ZoneOffset.UTC));
     }
 
     public boolean isValid() {

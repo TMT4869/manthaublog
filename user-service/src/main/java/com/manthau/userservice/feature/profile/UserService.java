@@ -27,12 +27,12 @@ public class UserService {
 
     // =================== READ ===================
 
-    // Public profile — cache-aside pattern
-    // requesterId nullable: null nếu anonymous, có giá trị nếu đã login
+    // Public profile - cache-aside pattern
+    // requesterId is nullable: null for anonymous users, populated for signed-in users.
     public UserProfileResponse getPublicProfile(String username, UUID requesterId) {
         UserProfileResponse cached = cacheService.getProfile(username);
         if (cached != null && requesterId == null) {
-            // Chỉ dùng cache cho anonymous — logged-in user cần isFollowing chính xác
+            // Use the cache only for anonymous users because signed-in users need accurate isFollowing data.
             log.debug("Cache hit for profile: {}", username);
             return cached;
         }
@@ -40,7 +40,7 @@ public class UserService {
         UserProfile profile = userProfileRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException(username));
 
-        // Kiểm tra xem requester có đang follow không
+        // Check whether the requester is following this profile.
         Boolean isFollowing = null;
         if (requesterId != null) {
             isFollowing = followRepository.existsByIdFollowerIdAndIdFollowingId(
@@ -49,7 +49,7 @@ public class UserService {
 
         UserProfileResponse response = userProfileMapper.toResponse(profile, isFollowing);
 
-        // Chỉ cache response cho anonymous (isFollowing = null)
+        // Cache responses only for anonymous users (isFollowing = null).
         if (requesterId == null) {
             cacheService.setProfile(username, response);
         }
@@ -57,12 +57,12 @@ public class UserService {
         return response;
     }
 
-    // Profile của chính mình — luôn lấy từ DB, không cache
+    // Own profile - always read from the database, not the cache.
     public UserProfileResponse getMyProfile(UUID userId) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
 
-        // Kiểm tra nếu bị ban thì vẫn cho xem profile của mình
+        // Banned users can still view their own profile.
         return userProfileMapper.toResponse(profile, null);
     }
 
@@ -76,7 +76,7 @@ public class UserService {
         userProfileMapper.updateEntity(profile, request);
         userProfileRepository.save(profile);
 
-        // Invalidate cache sau khi update
+        // Invalidate the cache after updating the profile.
         cacheService.evictProfile(profile.getUsername());
 
         return userProfileMapper.toResponse(profile, null);
@@ -89,7 +89,7 @@ public class UserService {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
 
-        // Soft delete — không xóa thật, chỉ đổi status
+        // Soft delete - change the status instead of deleting the row.
         profile.setStatus(UserStatus.DELETED);
         userProfileRepository.save(profile);
 
@@ -125,7 +125,7 @@ public class UserService {
 
     // =================== INTERNAL ===================
 
-    // Dùng nội bộ trong service — chỉ lấy user ACTIVE
+    // Internal service lookup - only returns active users.
     public UserProfile findActiveUserOrThrow(UUID userId) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId.toString()));
@@ -150,7 +150,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException(username));
     }
 
-    // Gọi khi nhận UserRegisteredEvent từ Auth Service
+    // Called when a UserRegisteredEvent is received from Auth Service.
     @Transactional
     public void createProfile(UUID userId, String username, String displayName) {
         if (userProfileRepository.existsById(userId)) {

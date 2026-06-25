@@ -8,10 +8,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
@@ -19,6 +19,7 @@ public class RedisEmailVerificationAdapter implements EmailVerificationPort {
 
     private static final long TTL_HOURS = 24;
     private static final String KEY_PREFIX = "verify:";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final StringRedisTemplate redisTemplate;
     private final AppProperties appProperties;
@@ -27,9 +28,9 @@ public class RedisEmailVerificationAdapter implements EmailVerificationPort {
     @Override
     public String createToken(UUID userId) {
         byte[] bytes = new byte[24];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        redisTemplate.opsForValue().set(KEY_PREFIX + token, userId.toString(), TTL_HOURS, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(KEY_PREFIX + token, userId.toString(), Duration.ofHours(TTL_HOURS));
         return token;
     }
 

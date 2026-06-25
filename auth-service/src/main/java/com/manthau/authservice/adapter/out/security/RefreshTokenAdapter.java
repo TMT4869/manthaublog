@@ -13,15 +13,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
 public class RefreshTokenAdapter implements RefreshTokenPort {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final RefreshTokenJpaRepository jpaRepository;
     private final StringRedisTemplate redisTemplate;
@@ -37,11 +39,11 @@ public class RefreshTokenAdapter implements RefreshTokenPort {
         jpaRepository.save(RefreshTokenEntity.builder()
                 .userId(userId)
                 .tokenHash(tokenHash)
-                .expiresAt(LocalDateTime.now().plusSeconds(ttlMs / 1000))
+                .expiresAt(LocalDateTime.now(ZoneOffset.UTC).plusSeconds(ttlMs / 1000))
                 .build());
 
         redisTemplate.opsForValue().set(
-                "session:" + userId, tokenHash, ttlMs, TimeUnit.MILLISECONDS);
+                "session:" + userId, tokenHash, Duration.ofMillis(ttlMs));
 
         return rawToken;
     }
@@ -50,7 +52,7 @@ public class RefreshTokenAdapter implements RefreshTokenPort {
     public Optional<UUID> validate(String rawToken) {
         String tokenHash = hash(rawToken);
         return jpaRepository.findByTokenHash(tokenHash)
-                .filter(t -> !t.isRevoked() && t.getExpiresAt().isAfter(LocalDateTime.now()))
+                .filter(t -> !t.isRevoked() && t.getExpiresAt().isAfter(LocalDateTime.now(ZoneOffset.UTC)))
                 .map(RefreshTokenEntity::getUserId);
     }
 
@@ -63,7 +65,7 @@ public class RefreshTokenAdapter implements RefreshTokenPort {
 
     private String generateSecureToken() {
         byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
